@@ -109,3 +109,16 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# DeepPCB original
+PCBData/
+evaluation/
+fig/
+tools/
+*.drawio
+README_PCB.yaml
+yolo*.pt
+
+# model intermediates
+model/*.torchscript.pt
+model/bin_output/
