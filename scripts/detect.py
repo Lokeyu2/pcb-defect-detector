@@ -100,6 +100,25 @@ class Detector:
                         edges = cv2.Canny(roi, 30, 100)
                         if edges.sum(axis=0).var() > 10 and edges.sum(axis=1).var() > 10:
                             continue
+                # 规则4: 丝印字符缝隙 → 剔除pin-hole
+                if name == "pin-hole" and wb >= 4 and hb >= 4:
+                    # 只对中低置信度(<0.7)做校验, 高置信度直接放行
+                    if sc < 0.70:
+                        # 在检测框周围取更大邻域, 检查是否有丝印文字痕迹
+                        x1e, y1e = max(0, x1-8), max(0, y1-8)
+                        x2e, y2e = min(gray.shape[1], x2+8), min(gray.shape[0], y2+8)
+                        surround = gray[y1e:y2e, x1e:x2e].copy()
+                        # 掩膜扣除检测框内部, 只看周围背景
+                        mask = np.ones_like(surround, dtype=np.uint8)
+                        mask[y1-y1e:y1-y1e+hb, x1-x1e:x1-x1e+wb] = 0
+                        bg = surround[mask.astype(bool)]
+                        if bg.size > 0:
+                            # 丝印特征是白色/高亮文字 -> 邻域平均亮度高且方差大(文字+背景混杂)
+                            bg_mean, bg_std = bg.mean(), bg.std()
+                            # 铜箔区背景亮度高(>180), 丝印区背景亮度中等但方差大(文字笔画造成)
+                            # 丝印区典型特征: bg_mean 100~170, bg_std > 30 (亮字+暗底混合)
+                            if 80 < bg_mean < 175 and bg_std > 30:
+                                continue
                 keep.append(d)
             final = np.array(keep) if keep else np.empty((0, 6))
 
@@ -141,7 +160,7 @@ def main():
 
     # 图片模式
     src = Path(args.source)
-    imgs = sorted(src.glob('*.jpg') + src.glob('*.png')) if src.is_dir() else [src]
+    imgs = sorted(list(src.glob('*.jpg')) + list(src.glob('*.png'))) if src.is_dir() else [src]
     for p in imgs:
         img = cv2.imread(str(p))
         if img is None: continue

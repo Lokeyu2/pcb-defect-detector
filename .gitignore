@@ -122,3 +122,10 @@ yolo*.pt
 # model intermediates
 model/*.torchscript.pt
 model/bin_output/
+
+# IDE
+.idea/
+.vscode/
+
+# 个人笔记
+linux-learn/
