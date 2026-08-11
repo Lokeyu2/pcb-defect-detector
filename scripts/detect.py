@@ -73,52 +73,116 @@ class Detector:
 
         final = np.array(final)
 
-        # 后处理规则
+        # 后处理规则（针对真实PCB板摄像头实拍优化）
         if self.use_rules:
             keep = []
+            h_img, w_img = img.shape[:2]
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            # 基于原图统计自适应阈值: 明亮区域通常是铜箔/焊盘, 暗区是基板
+            bg_bright = np.percentile(gray, 85)  # 背景高亮阈值（铜箔面）
+
             for d in final:
-                x1, y1, x2, y2, sc, ci = d.astype(int)
+                x1, y1, x2, y2 = d[:4].astype(int)   # 坐标取整
+                sc = float(d[4])                      # 置信度必须保留小数!
+                ci = int(d[5])
                 name = CLASS_NAMES[ci]
                 wb, hb = x2-x1, y2-y1
-                # 规则1: 极小面积剔除
-                if wb * hb < 5:
+                area = wb * hb
+                aspect = min(wb/hb, hb/wb) if wb > 0 and hb > 0 else 0
+
+                # ---- 通用过滤规则 (不分类别) ----
+
+                # R1: 极小面积剔除 (真实缺陷至少要有一定尺寸)
+                if area < 8:
                     continue
-                # 规则2: 圆形框+亮中心 → 过孔 → 剔除open
-                if name == "open" and wb >= 6 and hb >= 6:
-                    aspect = min(wb/hb, hb/wb)
-                    roi = gray[y1:y2, x1:x2]
-                    if roi.size > 0 and aspect > 0.7:
-                        cx, cy = wb//2, hb//2
-                        center = roi[max(0,cy-2):cy+3, max(0,cx-2):cx+3]
-                        if center.size > 0 and (center > 200).mean() > 0.3:
-                            continue
-                # 规则3: 拐角/T型 → 剔除short/spur
+
+                # R2: 极端宽高比 → 大概率是走线/划痕误检
+                if aspect < 0.15:
+                    continue
+
+                # R3: 框贴近图像边缘 (10px以内) 且置信度 < 0.6 → 边缘伪影剔除
+                edge_dist = min(x1, y1, w_img - x2, h_img - y2)
+                if edge_dist < 10 and sc < 0.6:
+                    continue
+
+                # R4: 框完全位于大面积纯色区域 → 基板纹理误检
+                roi = gray[y1:y2, x1:x2]
+                if roi.size > 0 and roi.std() < 8 and sc < 0.6:
+                    continue
+
+                # ---- 类别特定过滤 ----
+
+                # R5: open (开路) → 过孔/焊盘误检剔除
+                if name == "open":
+                    # 5a: 宽高比 > 0.6 说明是圆形/方形 → 可能是过孔或焊盘
+                    if aspect > 0.6:
+                        # 检查中心区域是否为高亮(铜箔/焊盘特征)
+                        cx_roi, cy_roi = wb//2, hb//2
+                        center = roi[max(0,cy_roi-3):cy_roi+4, max(0,cx_roi-3):cx_roi+4]
+                        if center.size > 0:
+                            center_mean = center.mean()
+                            # 焊盘/铜箔中心高亮 或者 过孔中心暗(孔洞)
+                            if center_mean > bg_bright * 0.9 or center_mean < 40:
+                                if sc < 0.65:
+                                    continue
+                    # 5b: 面积中等且置信度低 → 可能是焊盘
+                    if 20 < area < 200 and sc < 0.45:
+                        continue
+
+                # R6: short (短路) / spur (毛刺) → 走线/焊盘误检剔除
                 if name in ("short", "spur"):
-                    roi = gray[y1:y2, x1:x2]
-                    if roi.size >= 25:
+                    # 6a: ROI内边缘复杂度高且置信度低 → 走线密集区误检
+                    if roi.size >= 36:
                         edges = cv2.Canny(roi, 30, 100)
-                        if edges.sum(axis=0).var() > 10 and edges.sum(axis=1).var() > 10:
+                        edge_ratio = (edges > 0).mean()
+                        # 走线密集区边缘占比高(>30%)且杂乱
+                        if edge_ratio > 0.3 and sc < 0.55:
                             continue
-                # 规则4: 丝印字符缝隙 → 剔除pin-hole
-                if name == "pin-hole" and wb >= 4 and hb >= 4:
-                    # 只对中低置信度(<0.7)做校验, 高置信度直接放行
-                    if sc < 0.70:
-                        # 在检测框周围取更大邻域, 检查是否有丝印文字痕迹
-                        x1e, y1e = max(0, x1-8), max(0, y1-8)
-                        x2e, y2e = min(gray.shape[1], x2+8), min(gray.shape[0], y2+8)
+                    # 6b: 极小框+低置信度 → 噪声
+                    if area < 15 and sc < 0.5:
+                        continue
+
+                # R7: copper (铜箔/多余铜) → 背景纹理/焊盘误检剔除
+                if name == "copper":
+                    # 7a: 框内亮度均匀且置信度低 → 基板纹理
+                    if roi.size > 0 and roi.std() < 12 and sc < 0.55:
+                        continue
+                    # 7b: 小面积+低置信度
+                    if area < 25 and sc < 0.5:
+                        continue
+
+                # R8: pin-hole (针孔) → 丝印字符/污渍误检剔除
+                if name == "pin-hole":
+                    # 8a: 低置信度直接剔除(针孔太小, 低置信几乎都是误检)
+                    if sc < 0.40:
+                        continue
+                    # 8b: 检查邻域是否有丝印/字符特征
+                    if wb >= 4 and hb >= 4 and sc < 0.70:
+                        x1e, y1e = max(0, x1-10), max(0, y1-10)
+                        x2e, y2e = min(gray.shape[1], x2+10), min(gray.shape[0], y2+10)
                         surround = gray[y1e:y2e, x1e:x2e].copy()
-                        # 掩膜扣除检测框内部, 只看周围背景
                         mask = np.ones_like(surround, dtype=np.uint8)
                         mask[y1-y1e:y1-y1e+hb, x1-x1e:x1-x1e+wb] = 0
                         bg = surround[mask.astype(bool)]
                         if bg.size > 0:
-                            # 丝印特征是白色/高亮文字 -> 邻域平均亮度高且方差大(文字+背景混杂)
                             bg_mean, bg_std = bg.mean(), bg.std()
-                            # 铜箔区背景亮度高(>180), 丝印区背景亮度中等但方差大(文字笔画造成)
-                            # 丝印区典型特征: bg_mean 100~170, bg_std > 30 (亮字+暗底混合)
-                            if 80 < bg_mean < 175 and bg_std > 30:
+                            # 丝印文字特征: 中高亮度(白色文字) + 高方差(笔画与背景交错)
+                            if 70 < bg_mean < 190 and bg_std > 35:
                                 continue
+
+                # R9: mousebite (鼠咬) → 走线拐角误检剔除
+                if name == "mousebite":
+                    if area < 12 and sc < 0.5:
+                        continue
+                    # 鼠咬通常呈半圆形凹陷, ROI内边缘分布不均匀
+                    if roi.size >= 36 and sc < 0.55:
+                        edges = cv2.Canny(roi, 30, 100)
+                        h_edge = (edges.sum(axis=0) > 0).sum()
+                        v_edge = (edges.sum(axis=1) > 0).sum()
+                        # 如果水平和垂直边缘占比都很高 → 走线交叉/拐角误检
+                        if h_edge > wb * 0.5 and v_edge > hb * 0.5:
+                            continue
+
                 keep.append(d)
             final = np.array(keep) if keep else np.empty((0, 6))
 
@@ -128,7 +192,7 @@ class Detector:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', default='data/test_images', help='图片/目录/摄像头ID')
-    parser.add_argument('--model', default='model/best.onnx')
+    parser.add_argument('--model', default='D:\\DeepPCB-master\\model\\best.onnx')
     parser.add_argument('--conf', type=float, default=0.5)
     parser.add_argument('--save-dir', default='results')
     parser.add_argument('--no-rules', action='store_true')
@@ -146,7 +210,8 @@ def main():
             if not ret: break
             dets = det.detect(frame)
             for d in dets:
-                x1, y1, x2, y2, sc, ci = d.astype(int)
+                x1, y1, x2, y2 = d[:4].astype(int)
+                sc, ci = float(d[4]), int(d[5])
                 cv2.rectangle(frame, (x1,y1), (x2,y2), CLASS_COLORS[ci], 2)
                 label = f'{CLASS_NAMES[ci]} {sc:.2f}'
                 (tw,th),_ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
@@ -166,7 +231,8 @@ def main():
         if img is None: continue
         dets = det.detect(img)
         for d in dets:
-            x1, y1, x2, y2, sc, ci = d.astype(int)
+            x1, y1, x2, y2 = d[:4].astype(int)
+            sc, ci = float(d[4]), int(d[5])
             cv2.rectangle(img, (x1,y1), (x2,y2), CLASS_COLORS[ci], 2)
             label = f'{CLASS_NAMES[ci]} {sc:.2f}'
             (tw,th),_ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
