@@ -91,30 +91,44 @@ class Detector:
                 aspect = min(wb/hb, hb/wb) if wb > 0 and hb > 0 else 0
 
                 # ---- 通用过滤规则 (不分类别) ----
+                # 设计依据: 这几条针对"模型在真实PCB板上常犯的误检类型"设计,
+                # 阈值基于PC测试集调参, 换X5摄像头实拍后需按实际置信度分布重新标定
 
                 # R1: 极小面积剔除 (真实缺陷至少要有一定尺寸)
+                # 依据: 面积<8px的框在PCB成像上基本是噪声/走线边缘碎块,
+                #       真实缺陷(open/short等)在640尺度下至少占更大面积
                 if area < 8:
                     continue
 
                 # R2: 极端宽高比 → 大概率是走线/划痕误检
+                # 依据: aspect<0.15 表示框是极细长条(长宽比>6.7), PCB走线/划痕
+                #       正好是细长条形状, 而真实缺陷更接近团块状
                 if aspect < 0.15:
                     continue
 
                 # R3: 框贴近图像边缘 (10px以内) 且置信度 < 0.6 → 边缘伪影剔除
+                # 依据: 摄像头实拍时图像边缘常有反光/暗角/遮挡伪影,
+                #       模型对这类边缘区域易产生低置信度虚检
                 edge_dist = min(x1, y1, w_img - x2, h_img - y2)
                 if edge_dist < 10 and sc < 0.6:
                     continue
 
                 # R4: 框完全位于大面积纯色区域 → 基板纹理误检
+                # 依据: 真实缺陷所在区域的灰度必然有起伏(铜箔断裂/毛刺等改变局部亮度),
+                #       std<8说明该区域近乎纯色, 是基板底色被误检
                 roi = gray[y1:y2, x1:x2]
                 if roi.size > 0 and roi.std() < 8 and sc < 0.6:
                     continue
 
                 # ---- 类别特定过滤 ----
+                # 依据: 每类缺陷有特有的"易混淆对象", 用传统视觉特征区分
+                # DL(深度学习分类) + CV(传统视觉校验) 融合的核心体现
 
                 # R5: open (开路) → 过孔/焊盘误检剔除
                 if name == "open":
                     # 5a: 宽高比 > 0.6 说明是圆形/方形 → 可能是过孔或焊盘
+                    # 依据: 真实的open是"走线断开处", 呈细长缺口; 过孔/焊盘是圆形
+                    #       圆形特征 + 中心高亮(铜箔)或中心暗(孔洞) → 判定为过孔
                     if aspect > 0.6:
                         # 检查中心区域是否为高亮(铜箔/焊盘特征)
                         cx_roi, cy_roi = wb//2, hb//2
@@ -126,12 +140,16 @@ class Detector:
                                 if sc < 0.65:
                                     continue
                     # 5b: 面积中等且置信度低 → 可能是焊盘
+                    # 依据: 焊盘是PCB最常见的圆形铜面, 面积中等(20-200px),
+                    #       模型对其低置信度虚检较多
                     if 20 < area < 200 and sc < 0.45:
                         continue
 
                 # R6: short (短路) / spur (毛刺) → 走线/焊盘误检剔除
                 if name in ("short", "spur"):
                     # 6a: ROI内边缘复杂度高且置信度低 → 走线密集区误检
+                    # 依据: 真实short/spur是"异常相连/多余突刺", 边缘是规则的;
+                    #       走线密集区边缘占比高(>30%)且杂乱, 是模型常见虚检源
                     if roi.size >= 36:
                         edges = cv2.Canny(roi, 30, 100)
                         edge_ratio = (edges > 0).mean()
@@ -145,6 +163,8 @@ class Detector:
                 # R7: copper (铜箔/多余铜) → 背景纹理/焊盘误检剔除
                 if name == "copper":
                     # 7a: 框内亮度均匀且置信度低 → 基板纹理
+                    # 依据: 多余铜是"不该有的铜箔", 局部亮度不均匀(铜面+基板交界);
+                    #       std<12近乎纯色 → 基板/焊盘底色被误检为copper
                     if roi.size > 0 and roi.std() < 12 and sc < 0.55:
                         continue
                     # 7b: 小面积+低置信度
@@ -154,9 +174,13 @@ class Detector:
                 # R8: pin-hole (针孔) → 丝印字符/污渍误检剔除
                 if name == "pin-hole":
                     # 8a: 低置信度直接剔除(针孔太小, 低置信几乎都是误检)
+                    # 依据: pin-hole是最小目标, 像素级特征少, 模型对其置信度天然偏低,
+                    #       低置信度(0.40以下)绝大多数是误检, 宁可漏检也不误报
                     if sc < 0.40:
                         continue
                     # 8b: 检查邻域是否有丝印/字符特征
+                    # 依据: PCB丝印字符(白色文字)的笔画间隙在局部特征上与针孔相似,
+                    #       是pin-hole最大误检源. 丝印文字特征: 中高亮度+高方差
                     if wb >= 4 and hb >= 4 and sc < 0.70:
                         x1e, y1e = max(0, x1-10), max(0, y1-10)
                         x2e, y2e = min(gray.shape[1], x2+10), min(gray.shape[0], y2+10)
@@ -172,6 +196,8 @@ class Detector:
 
                 # R9: mousebite (鼠咬) → 走线拐角误检剔除
                 if name == "mousebite":
+                    # 依据: 真实鼠咬是走线边缘的"半圆形凹陷", 拐角处才是尖锐的;
+                    #       拐角在X/Y方向都有强边缘, 与鼠咬的"单边凹陷"不同
                     if area < 12 and sc < 0.5:
                         continue
                     # 鼠咬通常呈半圆形凹陷, ROI内边缘分布不均匀
