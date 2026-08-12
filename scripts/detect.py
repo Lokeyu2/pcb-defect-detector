@@ -64,7 +64,7 @@ class Detector:
             if not mask.any():
                 continue
             sub = boxes[mask]
-            keep = cv2.dnn.NMSBoxes(sub[:, :4].tolist(), sub[:, 4].tolist(), 0.01, 0.45)
+            keep = cv2.dnn.NMSBoxes(sub[:, :4].tolist(), sub[:, 4].tolist(), self.conf, 0.45)
             if keep is not None:
                 final.extend(sub[keep.flatten()].tolist())
 
