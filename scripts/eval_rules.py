@@ -1,7 +1,7 @@
 """
 后处理规则有效性验证脚本
 - 用同一批检测结果, 对比 无规则 / 现有规则 / 现有+新增规则 的 Prec/Recall
-- 验证集: D:/DeepPCB_YOLO/images/val + labels/val (1826张)
+- 验证集: DeepPCB_YOLO/images/val + labels/val (1826张)
 - 输出对比表, 供论文和规则调优使用
 用法: python scripts/eval_rules.py
 """
@@ -12,9 +12,13 @@ from pathlib import Path
 
 CLASS_NAMES = ["open", "short", "mousebite", "spur", "copper", "pin-hole"]
 
+# 匹配 IoU：与 eval_fp32.py / eval_confusion.py / 量化对比报告保持一致，避免论文里几张表口径打架
+MATCH_IOU = 0.3
+
 # ---------- 检测器（复用 detect.py 的 Detector, 支持开关规则） ----------
 import sys
 sys.path.insert(0, str(Path(__file__).parent))
+import paths
 from detect import Detector
 
 # ---------- 评估器 ----------
@@ -35,15 +39,17 @@ def iou(b1, b2):
     a2 = (b2[2]-b2[0])*(b2[3]-b2[1])
     return inter / (a1+a2-inter) if (a1+a2-inter) > 0 else 0
 
-def evaluate(det, img_dir, label_dir, img_ext='.jpg'):
+def evaluate(det, img_dir, label_dir, img_ext='.jpg', match_iou=0.3):
     """返回 (total_gt, total_det, total_tp, total_fp, total_fn) 全类合计"""
     total_gt = total_det = total_tp = total_fp = total_fn = 0
-    imgs = sorted(img_dir.glob('*' + img_ext)) if img_ext else sorted(img_dir.glob('*.jpg')) + sorted(img_dir.glob('*.png'))
+    # Path.glob 在本机环境返回空, 用 os.listdir（2026/08/12 踩过）
+    exts = (img_ext,) if img_ext else ('.jpg', '.png')
+    imgs = sorted(p for p in img_dir.iterdir() if p.suffix.lower() in exts)
     for img_path in imgs:
         label_path = label_dir / (img_path.stem + '.txt')
         gts = load_labels(label_path)
         if not gts: continue
-        img = cv2.imread(str(img_path))
+        img = paths.imread(img_path)
         if img is None: continue
         h_img, w_img = img.shape[:2]
         dets = det.detect(img)
@@ -51,9 +57,10 @@ def evaluate(det, img_dir, label_dir, img_ext='.jpg'):
         total_det += len(dets)
         matched = set()
         for d in dets:
-            best_iou, best_gt = 0.5, -1
+            best_iou, best_gt = match_iou, -1
             for gi, gt in enumerate(gts):
                 if gi in matched or d[5] != gt[0]: continue
+                # GT 是归一化中心点+宽高, 按每张图实际尺寸换算
                 gt_box = [int((gt[1]-gt[3]/2)*w_img), int((gt[2]-gt[4]/2)*h_img),
                           int((gt[1]+gt[3]/2)*w_img), int((gt[2]+gt[4]/2)*h_img)]
                 v = iou(d[:4], gt_box)
@@ -77,22 +84,23 @@ def report(tag, gt, det, tp, fp, fn):
 
 if __name__ == '__main__':
     # 用验证集评估（有GT标签）
-    val_img = Path('D:/DeepPCB_YOLO/images/val')
-    val_lab = Path('D:/DeepPCB_YOLO/labels/val')
+    val_img = paths.VAL_IMG
+    val_lab = paths.VAL_LAB
     # 用 test_images 统计检测数量（无GT, 看规则过滤效果）
-    test_img = Path('data/test_images')
+    test_img = paths.TEST_IMAGES
 
     print('='*85)
     print('后处理规则有效性验证')
-    print('验证集: D:/DeepPCB_YOLO/images/val (1826张, 有GT标签)')
+    print(f'验证集: {val_img} (1826张, 有GT标签)')
+    print(f'匹配口径: conf=0.5, IoU={MATCH_IOU}（与 eval_fp32/eval_confusion/量化报告一致）')
     print('='*85)
 
-    onnx_path = 'model/best.onnx'
+    onnx_path = str(paths.ONNX_PATH)
     results = {}
 
     for tag, use_rules in [('无规则 (baseline)', False), ('现有9条规则', True)]:
         det = Detector(onnx_path, conf=0.5, use_rules=use_rules)
-        gt, det_n, tp, fp, fn = evaluate(det, val_img, val_lab)
+        gt, det_n, tp, fp, fn = evaluate(det, val_img, val_lab, match_iou=MATCH_IOU)
         print(f'\n--- {tag} ---')
         p, r, f1 = report(tag, gt, det_n, tp, fp, fn)
         results[tag] = (p, r, f1, fp, fn)

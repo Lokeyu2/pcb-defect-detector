@@ -1,4 +1,4 @@
-path: D:\DeepPCB_YOLO
+path: D:\毕业设计-代码与资料\DeepPCB_YOLO
 train: images/train
 val: images/val
 

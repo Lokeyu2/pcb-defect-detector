@@ -5,10 +5,24 @@ __pycache__/
 
 # Project specific
 runs/
-results/
 scripts/old/
 *.log
 .yml
+
+# results/ 里 99% 是几百张批量检测输出图，排除；但报告类文件和演示图要进仓库
+results/*
+!results/*.md
+!results/*.html
+!results/*.txt
+!results/*.json
+!results/demo/
+!results/demo/*.jpg
+
+# 地平线工具链产物：校准集 + BIN 转换中间文件，体积大且可复现
+calibration_bin/
+calibration_bin_400/
+.hb_check/
+hb_mapper_*.log
 
 # C extensions
 *.so
@@ -122,6 +136,24 @@ yolo*.pt
 # model intermediates
 model/*.torchscript.pt
 model/bin_output/
+
+# 模型中间产物：broken / backup / 旧版本 / torchscript，都能从 best.pt 重新导出
+model/best.torchscript
+model/best_old_*.onnx
+model/best_opset*.onnx
+model/best_*opset*.onnx
+model/best_*_backup.onnx
+model/best_v2_*.pt
+model/best_v2_*.onnx
+
+# 量化中间产物：只保留 BIN + INT8 ONNX + 量化报告，
+# calibrated/optimized/original 三个 FP32 模型可由 best.onnx 重新生成
+config/pcb_v4_bin/*.html
+config/pcb_v4_bin/*.json
+!config/pcb_v4_bin/pcb_v4_quant_info.json
+config/pcb_v4_bin/pcb_v4_calibrated_model.onnx
+config/pcb_v4_bin/pcb_v4_optimized_float_model.onnx
+config/pcb_v4_bin/pcb_v4_original_float_model.onnx
 
 # IDE
 .idea/

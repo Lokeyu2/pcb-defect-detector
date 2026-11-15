@@ -1,0 +1,26 @@
+# PCB 缺陷检测 —— 运行环境
+# 安装: pip install -r requirements.txt
+#
+# 已在以下环境验证通过（Windows 11 + Python 3.13）：
+#   ultralytics 8.4.83 / onnxruntime 1.27.0 / opencv 4.13.0
+#   numpy 2.3.5 / flask 3.0.3
+
+# ---- 推理（detect.py / benchmark.py / Web 应用）----
+onnxruntime>=1.16.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# ---- 训练与导出（train_*.py / export.py）----
+# 仅在需要重新训练时安装；纯推理可注释掉，torch 体积较大
+ultralytics>=8.0.0
+onnx>=1.14.0
+pyyaml>=6.0
+
+# ---- Web 演示（pcb-web-app）----
+flask>=2.3.0
+werkzeug>=2.3.0
+
+# ---- 注意 ----
+# 地平线量化（convert_bin.py）依赖官方 Docker 镜像，不通过 pip 安装：
+#   openexplorer/ai_toolchain_ubuntu_20_x5_cpu:v1.2.8-py310
+# 详见 config/pcb_v4_nchw.yaml 与 README

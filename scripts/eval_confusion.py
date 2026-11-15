@@ -6,10 +6,11 @@ import cv2, numpy as np, sys, collections, os
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from detect import Detector
+import paths
 
-VAL_IMG = Path('D:/DeepPCB_YOLO/images/val')
-VAL_LAB = Path('D:/DeepPCB_YOLO/labels/val')
-ONNX = r'D:\DeepPCB-master\model\best.onnx'   # 修复后的 pcb_v4
+VAL_IMG = paths.VAL_IMG
+VAL_LAB = paths.VAL_LAB
+ONNX = str(paths.ONNX_PATH)   # 修复后的 pcb_v4
 CLASS_NAMES = ["open", "short", "mousebite", "spur", "copper", "pin-hole"]
 CONF = 0.5
 

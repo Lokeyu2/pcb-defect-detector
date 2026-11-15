@@ -3,14 +3,16 @@
 - 起点: runs/runs/pcb_merged_v1/weights/best.pt  (epoch92, PCB 6类, 完好)
 - 关键改动: 不用 resume=True (它复用缓存 coco8 污染训练), 改为显式加载权重 + 显式传 data
 - 全绝对路径 + 新 run 名 pcb_v4, 不碰任何旧成果
-用法: python D:/DeepPCB-master/scripts/train_pcb_v4.py
+用法: python scripts/train_pcb_v4.py
 """
 import os
 from ultralytics import YOLO
 
+import paths
+
 
 def main():
-    BASE = r'D:\DeepPCB-master'
+    BASE = str(paths.PROJECT_ROOT)
     START = os.path.join(BASE, 'runs', 'runs', 'pcb_merged_v1', 'weights', 'best.pt')
     DATA = os.path.join(BASE, 'data', 'data.yaml')
 

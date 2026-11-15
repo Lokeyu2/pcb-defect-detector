@@ -7,6 +7,8 @@ import numpy as np
 import onnxruntime as rt
 from pathlib import Path
 
+import paths
+
 CLASS_NAMES = ["open", "short", "mousebite", "spur", "copper", "pin-hole"]
 
 def load_labels(txt_path):
@@ -67,9 +69,9 @@ def iou(b1, b2):
 
 
 if __name__ == '__main__':
-    session = rt.InferenceSession('model/best.onnx')
-    img_dir = Path('data/test_images')
-    label_dir = Path('D:/DeepPCB_YOLO/labels/val')
+    session = rt.InferenceSession(str(paths.ONNX_PATH))
+    img_dir = paths.TEST_IMAGES
+    label_dir = paths.VAL_LAB
     conf = 0.5
 
     total_gt = {i:0 for i in range(6)}
@@ -78,14 +80,16 @@ if __name__ == '__main__':
     total_fn = {i:0 for i in range(6)}
     image_count = 0
 
-    for img_path in sorted(img_dir.glob('*.jpg')):
-        label_path = label_dir / img_path.name.replace('.jpg', '.txt')
+    for img_path in sorted(p for p in img_dir.iterdir() if p.suffix.lower() == '.jpg'):
+        label_path = label_dir / (img_path.stem + '.txt')
         gts = load_labels(label_path)
         if not gts:
             continue
 
         image_count += 1
-        img = cv2.imread(str(img_path))
+        img = paths.imread(img_path)
+        if img is None:
+            continue
         dets = detect(session, img, conf)
 
         # 统计GT

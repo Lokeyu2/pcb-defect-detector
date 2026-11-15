@@ -3,14 +3,16 @@
 - 从 runs/pcb_v3/weights/last.pt 真正续训 (resume=True)
 - 修正上次 resume=False 导致 early-stop 提前的问题
 - patience 给足, 让模型充分收敛到最优
-用法: python D:/DeepPCB-master/scripts/train_pcb_v3_resume.py
+用法: python scripts/train_pcb_v3_resume.py
 """
 import os
 from ultralytics import YOLO
 
+import paths
+
 
 def main():
-    BASE = r'D:\DeepPCB-master'
+    BASE = str(paths.PROJECT_ROOT)
     RUN_DIR = os.path.join(BASE, 'runs', 'pcb_v3')
     LAST = os.path.join(RUN_DIR, 'weights', 'last.pt')
     DATA = os.path.join(BASE, 'data', 'data.yaml')

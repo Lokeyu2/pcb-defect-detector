@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 
+import paths
 from detect import Detector, CLASS_NAMES
 
 
@@ -62,8 +63,8 @@ def bench(det, imgs, warmup=10, iters=100):
 
 def main():
     parser = argparse.ArgumentParser(description='PCB检测性能测试')
-    parser.add_argument('--model', default='D:\\DeepPCB-master\\model\\best.onnx')
-    parser.add_argument('--images', default='D:\\DeepPCB-master\\data\\test_images',
+    parser.add_argument('--model', default=str(paths.ONNX_PATH))
+    parser.add_argument('--images', default=str(paths.TEST_IMAGES),
                         help='图片目录或单张图, 默认data/test_images')
     parser.add_argument('--imgs', type=int, default=100, help='测试图数量上限')
     parser.add_argument('--warmup', type=int, default=10, help='预热次数')
@@ -78,11 +79,10 @@ def main():
     # 收集测试图
     src = Path(args.images)
     if src.is_dir():
-        imgs = sorted(list(src.glob('*.jpg')) + list(src.glob('*.png')))
+        files = sorted(p for p in src.iterdir() if p.suffix.lower() in ('.jpg', '.jpeg', '.png'))
     else:
-        imgs = [src]
-    imgs = [cv2.imread(str(p)) for p in imgs[:args.imgs] if cv2.imread(str(p)) is not None]
-    imgs = [i for i in imgs if i is not None]
+        files = [src]
+    imgs = [im for im in (paths.imread(p) for p in files[:args.imgs]) if im is not None]
     print(f"[数据] {len(imgs)}张图, 预热{args.warmup}次")
 
     if not imgs:

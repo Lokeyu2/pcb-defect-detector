@@ -8,10 +8,13 @@ PCB缺陷检测 - PC端推理（ONNX）
   python scripts/detect.py --no-rules                # 不加后处理过滤
 """
 import argparse
+import os
 import cv2
 import numpy as np
 from pathlib import Path
 import onnxruntime as rt
+
+import paths
 
 CLASS_NAMES = ["open", "short", "mousebite", "spur", "copper", "pin-hole"]
 CLASS_COLORS = [(0,0,255),(255,0,0),(0,255,0),(255,255,0),(255,0,255),(0,255,255)]
@@ -217,10 +220,10 @@ class Detector:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--source', default='data/test_images', help='图片/目录/摄像头ID')
-    parser.add_argument('--model', default='D:\\DeepPCB-master\\model\\best.onnx')
+    parser.add_argument('--source', default=str(paths.TEST_IMAGES), help='图片/目录/摄像头ID')
+    parser.add_argument('--model', default=str(paths.ONNX_PATH))
     parser.add_argument('--conf', type=float, default=0.5)
-    parser.add_argument('--save-dir', default='results')
+    parser.add_argument('--save-dir', default=str(paths.RESULTS_DIR))
     parser.add_argument('--no-rules', action='store_true')
     args = parser.parse_args()
 
@@ -251,10 +254,13 @@ def main():
 
     # 图片模式
     src = Path(args.source)
-    imgs = sorted(list(src.glob('*.jpg')) + list(src.glob('*.png'))) if src.is_dir() else [src]
+    imgs = sorted(p for p in src.iterdir() if p.suffix.lower() in ('.jpg', '.jpeg', '.png')) if src.is_dir() else [src]
+    ok_cnt = 0
     for p in imgs:
-        img = cv2.imread(str(p))
-        if img is None: continue
+        img = paths.imread(p)
+        if img is None:
+            print(f'[跳过] 无法读取 {p}')
+            continue
         dets = det.detect(img)
         for d in dets:
             x1, y1, x2, y2 = d[:4].astype(int)
@@ -265,14 +271,15 @@ def main():
             cv2.rectangle(img, (x1,y1-th-6), (x1+tw+4,y1), CLASS_COLORS[ci], -1)
             cv2.putText(img, label, (x1+2,y1-4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
         out = save_dir / f'result_{p.name}'
-        cv2.imwrite(str(out), img)
+        paths.imwrite(out, img)
+        ok_cnt += 1
         counts = {}
         for d in dets:
             n = CLASS_NAMES[int(d[5])]
             counts[n] = counts.get(n, 0) + 1
         detail = ', '.join(f'{k}={v}' for k,v in sorted(counts.items()))
         print(f'[{p.name}] {len(dets)} defects | {detail}')
-    print(f'\n完成: {len(imgs)}张, 结果存于 {save_dir}/')
+    print(f'\n完成: {ok_cnt}/{len(imgs)}张, 结果存于 {save_dir}/')
 
 
 if __name__ == '__main__':

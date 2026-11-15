@@ -4,14 +4,16 @@
 - 原因: pcb_v2 权重被误训(COCO)覆盖, 这是现存最优的合并训练成果
 - 全绝对路径, 在任何目录运行都安全
 - 已加 __main__ 保护, 解决 Windows multiprocessing 报错
-用法: python D:/DeepPCB-master/scripts/train_pcb_v3.py
+用法: python scripts/train_pcb_v3.py
 """
 import os
 from ultralytics import YOLO
 
+import paths
+
 
 def main():
-    BASE = r'D:\DeepPCB-master'
+    BASE = str(paths.PROJECT_ROOT)
     START = os.path.join(BASE, 'runs', 'runs', 'pcb_merged_v1', 'weights', 'last.pt')
     DATA = os.path.join(BASE, 'data', 'data.yaml')
 
