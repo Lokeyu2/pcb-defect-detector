@@ -1,4 +1,19 @@
-path: D:\毕业设计-代码与资料\DeepPCB_YOLO
+# 数据集位置。
+# 默认用相对路径 ../DeepPCB_YOLO（与 DeepPCB-master 同级），
+# 项目整体搬家后依然有效。
+#
+# 数据集不随本仓库分发。重新训练前请自行下载并准备：
+#   DeepPCB        https://github.com/Charmve/DeepPCB
+#   PCBDatasets1   （6 类 PCB 缺陷数据集，需按 README 的类别映射转换）
+# 目录结构：
+#   DeepPCB_YOLO/
+#     ├─ images/train   (10,342 张)
+#     ├─ images/val     (1,826 张)
+#     ├─ labels/train
+#     └─ labels/val
+#
+# 也支持绝对路径（换成你自己的位置即可）。
+path: ../DeepPCB_YOLO
 train: images/train
 val: images/val
 

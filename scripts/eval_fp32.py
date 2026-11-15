@@ -79,6 +79,7 @@ def detect(sess, img):
 
 
 def main():
+    paths.require_dataset()
     sess = rt.InferenceSession(FP32_MODEL)
     imgs = sorted([f for f in os.listdir(VAL_IMG) if f.endswith('.jpg')])
     total_gt = {i: 0 for i in range(6)}

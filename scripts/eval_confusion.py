@@ -30,6 +30,7 @@ def iou(a, b):
     aa = (a[2]-a[0])*(a[3]-a[1]); bb = (b[2]-b[0])*(b[3]-b[1])
     return inter/(aa+bb-inter) if aa+bb-inter>0 else 0
 
+paths.require_dataset()
 det = Detector(ONNX, conf=CONF, use_rules=False)
 
 conf_mat = np.zeros((6,6), dtype=int)

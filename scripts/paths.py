@@ -53,6 +53,25 @@ def imwrite(path, img):
     return True
 
 
+def require_dataset():
+    """数据集缺失时给出可操作的提示，而不是让脚本抛 FileNotFoundError。
+
+    评估脚本（eval_*.py）需要带标注的验证集才能跑；仓库不随代码分发数据集。
+    """
+    if VAL_IMG.is_dir() and VAL_LAB.is_dir():
+        return
+    raise SystemExit(
+        '\n[缺少数据集]\n'
+        f'  需要: {DATASET_ROOT}\n'
+        f'  结构: images/train、images/val、labels/train、labels/val\n\n'
+        '  数据集不随仓库分发（训练集 10,342 张，体积过大）。\n'
+        '  获取方式见 README「数据集」一节，需自行下载 DeepPCB + PCBDatasets1。\n\n'
+        '  现在能直接跑的（不需要数据集）：\n'
+        '    python scripts/detect.py          # 用 data/test_images 里的 233 张测试图\n'
+        '    python scripts/benchmark.py       # 性能测试\n'
+    )
+
+
 def wsl_path(path):
     """D:\\a\\b → /mnt/d/a/b，给 Docker / WSL 里的地平线工具链用。"""
     p = Path(path).resolve()

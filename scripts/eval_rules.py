@@ -83,6 +83,7 @@ def report(tag, gt, det, tp, fp, fn):
 
 
 if __name__ == '__main__':
+    paths.require_dataset()
     # 用验证集评估（有GT标签）
     val_img = paths.VAL_IMG
     val_lab = paths.VAL_LAB
