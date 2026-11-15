@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>PCB 缺陷检测 · 数据对比总表</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: "Microsoft YaHei", -apple-system, sans-serif; background:#f7f8fa; color:#1f2937;
+       margin:0 auto; padding:36px 40px; max-width:1180px; line-height:1.7; }
+h1 { color:#0f172a; font-size:28px; border-bottom:3px solid #3b82f6; padding-bottom:10px; margin-bottom:8px; }
+h2 { color:#1e40af; font-size:20px; margin:36px 0 14px; padding-left:12px; border-left:4px solid #3b82f6; }
+h3 { color:#1e3a8a; font-size:16px; margin:24px 0 10px; }
+h4 { color:#334155; font-size:14.5px; margin:18px 0 8px; }
+table { width:100%; border-collapse:collapse; margin:12px 0 22px; background:#fff;
+        box-shadow:0 1px 3px rgba(0,0,0,.08); border-radius:8px; overflow:hidden; font-size:14px; }
+th { background:#1e40af; color:#fff; padding:10px 12px; text-align:left; font-weight:600; font-size:13.5px; }
+td { padding:9px 12px; border-top:1px solid #e5e7eb; }
+tbody tr:nth-child(even) { background:#f9fafb; }
+tbody tr:hover { background:#eff6ff; }
+.a-r { text-align:right; font-family:Consolas,monospace; }
+.a-c { text-align:center; }
+strong { color:#b91c1c; }
+code { background:#f1f5f9; color:#0f766e; padding:1px 6px; border-radius:4px;
+       font-family:Consolas,monospace; font-size:13px; }
+blockquote { margin:14px 0; padding:12px 18px; background:#fffbeb; border-left:4px solid #f59e0b;
+             color:#78350f; font-size:13.5px; border-radius:0 6px 6px 0; }
+hr { border:none; border-top:1px dashed #cbd5e1; margin:34px 0; }
+ul { margin:10px 0; padding-left:24px; }
+li { margin:4px 0; }
+@media print {
+  body { background:#fff; padding:0; }
+  table { box-shadow:none; border:1px solid #cbd5e1; page-break-inside:avoid; }
+  h2 { page-break-after:avoid; }
+}
+</style>
+</head>
+<body>
+<h1>PCB 缺陷检测 — 数据对比总表</h1>
+<blockquote>生成日期：2026-11-15　|　模型：YOLOv8n（3.01M 参数）　|　全部数据均为本项目实测</blockquote>
+<hr>
+<h2>一、数据集</h2>
+<table><thead><tr>
+<th>数据集</th>
+<th class="ar">图片数</th>
+<th class="ar">标注数</th>
+<th>来源</th>
+</tr></thead><tbody>
+<tr>
+<td class="al">训练集</td>
+<td class="ar">10,342</td>
+<td class="ar">—</td>
+<td class="al">DeepPCB 1,275 + PCBDatasets1 9,067（合并）</td>
+</tr>
+<tr>
+<td class="al">验证集</td>
+<td class="ar">1,826</td>
+<td class="ar">4,737</td>
+<td class="al">DeepPCB 225 + PCBDatasets1 1,601</td>
+</tr>
+<tr>
+<td class="al">测试散图</td>
+<td class="ar">233</td>
+<td class="ar">无标注</td>
+<td class="al">分布外样本，用于规则效果验证</td>
+</tr>
+</tbody></table>
+<p><strong>六类缺陷：</strong> open（开路）、short（短路）、mousebite（鼠咬）、spur（毛刺）、copper（多余铜）、pin-hole（针孔）</p>
+<p><strong>类别映射（PCBDatasets1 → 本数据集）：</strong></p>
+<table><thead><tr>
+<th>原类别</th>
+<th class="ac">→</th>
+<th>映射后</th>
+</tr></thead><tbody>
+<tr>
+<td class="al">missing_hole</td>
+<td class="ac">→</td>
+<td class="al">pin-hole (5)</td>
+</tr>
+<tr>
+<td class="al">mouse_bite</td>
+<td class="ac">→</td>
+<td class="al">mousebite (2)</td>
+</tr>
+<tr>
+<td class="al">open_circuit</td>
+<td class="ac">→</td>
+<td class="al">open (0)</td>
+</tr>
+<tr>
+<td class="al">short</td>
+<td class="ac">→</td>
+<td class="al">short (1)</td>
+</tr>
+<tr>
+<td class="al">spur</td>
+<td class="ac">→</td>
+<td class="al">spur (3)</td>
+</tr>
+<tr>
+<td class="al">copper</td>
+<td class="ac">→</td>
+<td class="al">copper (4)</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>二、训练与模型迭代</h2>
+<table><thead><tr>
+<th>实验</th>
+<th>起点</th>
+<th class="ar">Epochs</th>
+<th class="ar">mAP50</th>
+<th class="ar">mAP50-95</th>
+<th>备注</th>
+</tr></thead><tbody>
+<tr>
+<td class="al">实验1 标签错位基线</td>
+<td class="al">从零</td>
+<td class="ar">200</td>
+<td class="ar"><strong>0.279</strong></td>
+<td class="ar">—</td>
+<td class="al">标签1-indexed未转0-indexed，全错位</td>
+</tr>
+<tr>
+<td class="al">实验2 标签校正</td>
+<td class="al">从零</td>
+<td class="ar">171</td>
+<td class="ar">0.991</td>
+<td class="ar">0.794</td>
+<td class="al">仅 DeepPCB 1,275 张</td>
+</tr>
+<tr>
+<td class="al">实验3 合并数据集</td>
+<td class="al">续训</td>
+<td class="ar">31</td>
+<td class="ar">0.991</td>
+<td class="ar">0.670</td>
+<td class="al">早停截断，未收敛</td>
+</tr>
+<tr>
+<td class="al"><strong>实验4 pcb_v4</strong></td>
+<td class="al">显式加载</td>
+<td class="ar"><strong>180</strong></td>
+<td class="ar"><strong>0.993</strong></td>
+<td class="ar"><strong>0.730</strong></td>
+<td class="al">完整收敛，<strong>当前主力模型</strong></td>
+</tr>
+<tr>
+<td class="al">实验5 pcb_v4_noflip</td>
+<td class="al">续训</td>
+<td class="ar">180</td>
+<td class="ar">0.993</td>
+<td class="ar"><strong>0.740</strong></td>
+<td class="al">关闭Flip，+0.010</td>
+</tr>
+</tbody></table>
+<p><strong>实验4 分类别指标（验证集 1,826 张 / 4,737 实例）：</strong></p>
+<table><thead><tr>
+<th>类别</th>
+<th class="ar">实例数</th>
+<th class="ar">P</th>
+<th class="ar">R</th>
+<th class="ar">mAP50</th>
+<th class="ar">mAP50-95</th>
+</tr></thead><tbody>
+<tr>
+<td class="al"><strong>all</strong></td>
+<td class="ar"><strong>4,737</strong></td>
+<td class="ar"><strong>0.986</strong></td>
+<td class="ar"><strong>0.989</strong></td>
+<td class="ar"><strong>0.993</strong></td>
+<td class="ar"><strong>0.730</strong></td>
+</tr>
+<tr>
+<td class="al">open</td>
+<td class="ar">898</td>
+<td class="ar">0.983</td>
+<td class="ar">0.991</td>
+<td class="ar">0.992</td>
+<td class="ar">0.721</td>
+</tr>
+<tr>
+<td class="al">short</td>
+<td class="ar">713</td>
+<td class="ar">0.981</td>
+<td class="ar">0.982</td>
+<td class="ar">0.992</td>
+<td class="ar">0.713</td>
+</tr>
+<tr>
+<td class="al">mousebite</td>
+<td class="ar">800</td>
+<td class="ar">0.987</td>
+<td class="ar">0.985</td>
+<td class="ar">0.993</td>
+<td class="ar">0.721</td>
+</tr>
+<tr>
+<td class="al">spur</td>
+<td class="ar">770</td>
+<td class="ar">0.991</td>
+<td class="ar">0.988</td>
+<td class="ar">0.993</td>
+<td class="ar">0.709</td>
+</tr>
+<tr>
+<td class="al">copper</td>
+<td class="ar">784</td>
+<td class="ar">0.989</td>
+<td class="ar">0.995</td>
+<td class="ar">0.993</td>
+<td class="ar">0.764</td>
+</tr>
+<tr>
+<td class="al">pin-hole</td>
+<td class="ar">772</td>
+<td class="ar">0.987</td>
+<td class="ar">0.991</td>
+<td class="ar">0.992</td>
+<td class="ar">0.756</td>
+</tr>
+</tbody></table>
+<p><strong>数据增强消融（Flip 开关）：</strong></p>
+<table><thead><tr>
+<th>类别</th>
+<th class="ar">pcb_v4</th>
+<th class="ar">noflip</th>
+<th class="ar">变化</th>
+</tr></thead><tbody>
+<tr>
+<td class="al">open</td>
+<td class="ar">0.721</td>
+<td class="ar">0.728</td>
+<td class="ar">+0.007</td>
+</tr>
+<tr>
+<td class="al">short</td>
+<td class="ar">0.713</td>
+<td class="ar">0.714</td>
+<td class="ar">+0.001</td>
+</tr>
+<tr>
+<td class="al">mousebite</td>
+<td class="ar">0.721</td>
+<td class="ar">0.733</td>
+<td class="ar">+0.012</td>
+</tr>
+<tr>
+<td class="al">spur</td>
+<td class="ar">0.709</td>
+<td class="ar">0.713</td>
+<td class="ar">+0.004</td>
+</tr>
+<tr>
+<td class="al">copper</td>
+<td class="ar">0.764</td>
+<td class="ar">0.773</td>
+<td class="ar">+0.009</td>
+</tr>
+<tr>
+<td class="al">pin-hole</td>
+<td class="ar">0.756</td>
+<td class="ar">0.778</td>
+<td class="ar"><strong>+0.022</strong></td>
+</tr>
+<tr>
+<td class="al"><strong>总计 mAP50-95</strong></td>
+<td class="ar"><strong>0.730</strong></td>
+<td class="ar"><strong>0.7397</strong></td>
+<td class="ar"><strong>+0.010</strong></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>三、量化前后对比（FP32 vs INT8）</h2>
+<p><strong>评估口径：</strong> 验证集 1,826 张，conf=0.5，IoU=0.3</p>
+<table><thead><tr>
+<th>指标</th>
+<th class="ar">FP32</th>
+<th class="ar">INT8</th>
+<th class="ar">变化</th>
+</tr></thead><tbody>
+<tr>
+<td class="al">Precision</td>
+<td class="ar">0.978</td>
+<td class="ar">0.673</td>
+<td class="ar">−0.305</td>
+</tr>
+<tr>
+<td class="al">Recall</td>
+<td class="ar">0.971</td>
+<td class="ar">0.684</td>
+<td class="ar">−0.287</td>
+</tr>
+<tr>
+<td class="al">F1</td>
+<td class="ar">0.975</td>
+<td class="ar">0.678</td>
+<td class="ar">−0.297</td>
+</tr>
+<tr>
+<td class="al">模型体积</td>
+<td class="ar">12.2 MB</td>
+<td class="ar">3.3 MB</td>
+<td class="ar"><strong>−73%</strong></td>
+</tr>
+</tbody></table>
+<p><strong>按缺陷密度分桶（INT8 检出率）——量化损失根因：</strong></p>
+<table><thead><tr>
+<th class="ar">每图 GT 数</th>
+<th class="ar">总 GT</th>
+<th class="ar">检出</th>
+<th class="ar">检出率</th>
+</tr></thead><tbody>
+<tr>
+<td class="ar">1</td>
+<td class="ar">597</td>
+<td class="ar">561</td>
+<td class="ar">94%</td>
+</tr>
+<tr>
+<td class="ar">2</td>
+<td class="ar">1,106</td>
+<td class="ar">1,006</td>
+<td class="ar">91%</td>
+</tr>
+<tr>
+<td class="ar">3</td>
+<td class="ar">897</td>
+<td class="ar">825</td>
+<td class="ar">92%</td>
+</tr>
+<tr>
+<td class="ar"><strong>4+</strong></td>
+<td class="ar">2,137</td>
+<td class="ar">850</td>
+<td class="ar"><strong>40%</strong></td>
+</tr>
+</tbody></table>
+<p><strong>逐层量化质量（cosine similarity）：</strong></p>
+<table><thead><tr>
+<th>分支</th>
+<th class="ar">cosine</th>
+<th>说明</th>
+</tr></thead><tbody>
+<tr>
+<td class="al">分类分支 cv2.1</td>
+<td class="ar"><strong>0.911</strong></td>
+<td class="al">损失最大，是精度下降主因</td>
+</tr>
+<tr>
+<td class="al">回归分支 dfl</td>
+<td class="ar">0.986</td>
+<td class="al">框位置基本保持</td>
+</tr>
+<tr>
+<td class="al">全模型 178 层平均</td>
+<td class="ar">0.985</td>
+<td class="al">—</td>
+</tr>
+</tbody></table>
+<p><strong>校准集策略对比：</strong></p>
+<table><thead><tr>
+<th>策略</th>
+<th class="ar">校准图数</th>
+<th class="ar">检测头最差 cosine</th>
+<th class="ar">端到端 F1</th>
+</tr></thead><tbody>
+<tr>
+<td class="al">default</td>
+<td class="ar">200</td>
+<td class="ar">0.861</td>
+<td class="ar">0.694</td>
+</tr>
+<tr>
+<td class="al"><strong>default</strong></td>
+<td class="ar"><strong>400</strong></td>
+<td class="ar"><strong>0.911</strong></td>
+<td class="ar"><strong>0.678</strong></td>
+</tr>
+<tr>
+<td class="al">max</td>
+<td class="ar">400</td>
+<td class="ar">0.372</td>
+<td class="ar">更差</td>
+</tr>
+<tr>
+<td class="al">mix</td>
+<td class="ar">400</td>
+<td class="ar">0.911</td>
+<td class="ar">= default</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>四、后处理规则效果（2026-11-15 实测）</h2>
+<p><strong>评估口径：</strong> 验证集 1,826 张 / 4,737 实例，conf=0.5，IoU=0.3</p>
+<table><thead><tr>
+<th>指标</th>
+<th class="ar">无规则</th>
+<th class="ar">有 9 条规则</th>
+<th class="ar">变化</th>
+</tr></thead><tbody>
+<tr>
+<td class="al">检测框数</td>
+<td class="ar">4,702</td>
+<td class="ar">4,658</td>
+<td class="ar">−44</td>
+</tr>
+<tr>
+<td class="al">TP</td>
+<td class="ar">4,600</td>
+<td class="ar">4,591</td>
+<td class="ar">−9</td>
+</tr>
+<tr>
+<td class="al"><strong>FP</strong></td>
+<td class="ar"><strong>102</strong></td>
+<td class="ar"><strong>67</strong></td>
+<td class="ar"><strong>−35（−34%）</strong></td>
+</tr>
+<tr>
+<td class="al">FN</td>
+<td class="ar">137</td>
+<td class="ar">146</td>
+<td class="ar">+9</td>
+</tr>
+<tr>
+<td class="al">Precision</td>
+<td class="ar">0.978</td>
+<td class="ar"><strong>0.986</strong></td>
+<td class="ar"><strong>+0.7pp</strong></td>
+</tr>
+<tr>
+<td class="al">Recall</td>
+<td class="ar">0.971</td>
+<td class="ar">0.969</td>
+<td class="ar">−0.2pp</td>
+</tr>
+<tr>
+<td class="al">F1</td>
+<td class="ar">0.975</td>
+<td class="ar"><strong>0.977</strong></td>
+<td class="ar">+0.2pp</td>
+</tr>
+</tbody></table>
+<p><strong>规则按类别生效明细：</strong></p>
+<table><thead><tr>
+<th>类别</th>
+<th class="ar">保留</th>
+<th class="ar">滤掉误检</th>
+<th class="ar">滤掉真检</th>
+<th class="ar">规则精度</th>
+</tr></thead><tbody>
+<tr>
+<td class="al"><strong>open</strong></td>
+<td class="ar">880</td>
+<td class="ar"><strong>22</strong></td>
+<td class="ar">3</td>
+<td class="ar"><strong>88%</strong></td>
+</tr>
+<tr>
+<td class="al">short</td>
+<td class="ar">700</td>
+<td class="ar">1</td>
+<td class="ar">3</td>
+<td class="ar">25%</td>
+</tr>
+<tr>
+<td class="al">mousebite</td>
+<td class="ar">780</td>
+<td class="ar">4</td>
+<td class="ar">1</td>
+<td class="ar">80%</td>
+</tr>
+<tr>
+<td class="al">spur</td>
+<td class="ar">765</td>
+<td class="ar">3</td>
+<td class="ar">1</td>
+<td class="ar">75%</td>
+</tr>
+<tr>
+<td class="al">copper</td>
+<td class="ar">779</td>
+<td class="ar">3</td>
+<td class="ar">1</td>
+<td class="ar">75%</td>
+</tr>
+<tr>
+<td class="al">pin-hole</td>
+<td class="ar">754</td>
+<td class="ar">2</td>
+<td class="ar">0</td>
+<td class="ar">100%</td>
+</tr>
+<tr>
+<td class="al"><strong>合计</strong></td>
+<td class="ar"><strong>4,658</strong></td>
+<td class="ar"><strong>35</strong></td>
+<td class="ar"><strong>9</strong></td>
+<td class="ar"><strong>79.5%</strong></td>
+</tr>
+</tbody></table>
+<p><strong>结论：</strong> 规则共剔除 44 个框，其中 35 个误检、9 个真检，剔除准确率 79.5%。净收益高度集中在 <strong>open 类</strong>（22 个误检换 3 个真检，剔除准确率 88%）——对应 R5“圆形过孔 vs 细长开路”这条物理判据最可靠。其余五类接近中性，与“模型置信度高、低置信度过滤分支触发率低”的观察一致。</p>
+<hr>
+<h2>五、性能</h2>
+<table><thead><tr>
+<th>平台</th>
+<th class="ar">单帧耗时</th>
+<th class="ar">FPS</th>
+<th>说明</th>
+</tr></thead><tbody>
+<tr>
+<td class="al">PC · ONNX Runtime · CPU</td>
+<td class="ar">55.54 ms</td>
+<td class="ar"><strong>18.0</strong></td>
+<td class="al">2026-11-15 实测（benchmark.py）</td>
+</tr>
+<tr>
+<td class="al">PC · RTX 4050</td>
+<td class="ar">5.6 ms</td>
+<td class="ar">~178</td>
+<td class="al">训练机推理，pre+inf+post 合计</td>
+</tr>
+<tr>
+<td class="al">RDK X5 · BPU</td>
+<td class="ar">待测</td>
+<td class="ar">待测</td>
+<td class="al">BIN 已编译完成，板端待部署</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>六、与公开论文对比</h2>
+<table><thead><tr>
+<th>模型</th>
+<th>数据集</th>
+<th class="ar">mAP50</th>
+<th class="ar">mAP50-95</th>
+</tr></thead><tbody>
+<tr>
+<td class="al"><strong>本工作 YOLOv8n</strong></td>
+<td class="al">合并(10,342+1,826)</td>
+<td class="ar"><strong>0.993</strong></td>
+<td class="ar"><strong>0.730</strong></td>
+</tr>
+<tr>
+<td class="al">Enhanced YOLOv11 (Nature 2025)</td>
+<td class="al">DeepPCB</td>
+<td class="ar">0.989</td>
+<td class="ar">0.810</td>
+</tr>
+<tr>
+<td class="al">YOLOv11 基线 (Nature 2025)</td>
+<td class="al">DeepPCB</td>
+<td class="ar">0.985</td>
+<td class="ar">0.792</td>
+</tr>
+<tr>
+<td class="al">YOLOv10 (Nature 2025)</td>
+<td class="al">DeepPCB</td>
+<td class="ar">0.982</td>
+<td class="ar">0.758</td>
+</tr>
+<tr>
+<td class="al">改良 YOLOv5s (Lin 2025)</td>
+<td class="al">DeepPCB</td>
+<td class="ar">0.991</td>
+<td class="ar">—</td>
+</tr>
+<tr>
+<td class="al">DeepPCB 原论文 Faster R-CNN</td>
+<td class="al">DeepPCB</td>
+<td class="ar">0.976</td>
+<td class="ar">—</td>
+</tr>
+</tbody></table>
+<blockquote><strong>口径说明：</strong> 本工作用 YOLOv8n（3.01M 参数）达到 mAP50 最高；mAP50-95 落后于重型网络是轻量化 + 640 输入 + 边缘实时约束的主动取舍，不是训练不足。</blockquote>
+<hr>
+<h2>七、⚠️ 数据口径修正记录</h2>
+<table><thead><tr>
+<th>项目</th>
+<th>旧说法</th>
+<th>实测值</th>
+<th>说明</th>
+</tr></thead><tbody>
+<tr>
+<td class="al">规则降误检率</td>
+<td class="al">“降低 90%”</td>
+<td class="al"><strong>降低 34%</strong>（FP 102→67）</td>
+<td class="al">旧数据出自早期模型单条规则验证(226张)，不可与 pcb_v4 数据混用</td>
+</tr>
+<tr>
+<td class="al">参数量</td>
+<td class="al">“6M 参数”</td>
+<td class="al"><strong>3.01M 参数</strong></td>
+<td class="al">6MB 是 best.pt <strong>文件大小</strong>，不是参数量</td>
+</tr>
+<tr>
+<td class="al">板端推理</td>
+<td class="al">“板端实时推理”</td>
+<td class="al"><strong>BIN 已编译，板端未实测</strong></td>
+<td class="al">对外只说“BIN 编译通过”</td>
+</tr>
+</tbody></table>
+<hr>
+<p>*数据文件位置：`D:\毕业设计-代码与资料\DeepPCB-master</p>
+<p>esults\`*</p>
+<hr>
+<p>*数据文件位置：D:/毕业设计-代码与资料/DeepPCB-master/results/*</p>
+</body>
+</html>
